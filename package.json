@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "Control de Gastos de Ruta - Colombia",
   "scripts": {
-    "start": "serve -p ${PORT:-3000} -s ."
+    "start": "node server.js"
   },
   "dependencies": {
-    "serve": "^14.2.1"
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "sqlite3": "^6.0.1"
   }
 }

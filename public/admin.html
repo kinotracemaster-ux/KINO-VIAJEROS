@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Control de Gastos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; overflow-x: hidden; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    </style>
+</head>
+<body class="text-black antialiased selection:bg-red-200 selection:text-red-900 pb-20">
+
+    <div x-data="adminApp()" x-init="initApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-10">
+        
+        <!-- Encabezado -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 pb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-black flex items-center">
+                    <span class="bg-black text-white p-2 rounded-xl mr-3">👑</span>
+                    Panel Administrativo
+                </h1>
+                <p class="text-gray-500 mt-2 font-medium">Control general de gastos de viajeros</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/index.html" class="px-4 py-2 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200 transition">Volver a Viajeros</a>
+            </div>
+        </header>
+
+        <!-- Contenedor Principal (2 Columnas) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Lista de Viajeros -->
+            <div class="lg:col-span-1 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden h-[75vh] flex flex-col">
+                <div class="p-5 border-b border-gray-100 bg-gray-50">
+                    <h2 class="text-xl font-bold text-black">Viajeros Activos</h2>
+                </div>
+                <div x-show="viajeros.length === 0" class="p-8 text-center text-gray-500 font-bold">
+                    No hay viajeros registrados aún.
+                </div>
+                <ul class="divide-y divide-gray-100 overflow-y-auto custom-scrollbar flex-1">
+                    <template x-for="v in viajeros" :key="v.id">
+                        <li @click="seleccionarViajero(v)" 
+                            class="p-5 cursor-pointer hover:bg-red-50 transition-colors"
+                            :class="{'bg-red-50 border-l-4 border-red-600': viajeroSeleccionado?.id === v.id}">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-bold text-lg text-black" x-text="v.name"></p>
+                                    <p class="text-xs text-gray-500 font-bold mt-1" x-text="\`\${formatearFecha(v.departure_date)} - \${formatearFecha(v.arrival_date)}\`"></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-bold text-red-600" x-text="formatearMoneda(v.total_expenses)"></p>
+                                    <p class="text-xs text-gray-400 font-bold mt-1" x-text="\`\${v.expense_count} gastos\`"></p>
+                                </div>
+                            </div>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <!-- Detalles del Viajero Seleccionado -->
+            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden h-[75vh] flex flex-col">
+                <template x-if="!viajeroSeleccionado">
+                    <div class="flex-1 flex flex-col items-center justify-center p-12 text-center text-gray-400">
+                        <span class="text-6xl mb-4">👆</span>
+                        <p class="text-xl font-bold">Selecciona un viajero para ver sus gastos</p>
+                    </div>
+                </template>
+
+                <template x-if="viajeroSeleccionado">
+                    <div class="flex flex-col h-full">
+                        <!-- Cabecera del detalle -->
+                        <div class="p-6 border-b border-gray-100 bg-black text-white flex justify-between items-center">
+                            <div>
+                                <h2 class="text-2xl font-bold" x-text="\`Gastos de \${viajeroSeleccionado.name}\`"></h2>
+                                <p class="text-gray-400 text-sm mt-1" x-text="\`\${gastosActivos.length} movimientos registrados\`"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Total Gastado</p>
+                                <p class="text-3xl font-bold text-red-500" x-text="formatearMoneda(viajeroSeleccionado.total_expenses)"></p>
+                            </div>
+                        </div>
+
+                        <!-- Lista de gastos -->
+                        <ul class="divide-y divide-gray-100 overflow-y-auto custom-scrollbar flex-1 p-2">
+                            <li x-show="gastosActivos.length === 0" class="p-8 text-center text-gray-500 font-bold">
+                                Este viajero no tiene gastos registrados.
+                            </li>
+                            <template x-for="gasto in gastosActivos" :key="gasto.id">
+                                <li class="p-5 hover:bg-gray-50 flex items-center justify-between">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border border-gray-100" 
+                                            :class="obtenerColorConcepto(gasto.concept)" 
+                                            x-text="obtenerIconoConcepto(gasto.concept)"></div>
+                                        <div>
+                                            <p class="text-base font-bold text-black" x-text="gasto.concept"></p>
+                                            <p class="text-sm text-gray-500" x-text="gasto.notes"></p>
+                                            <p class="text-xs text-gray-400 font-bold mt-1" x-text="formatearFecha(gasto.date)"></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-lg font-bold text-black" x-text="formatearMoneda(gasto.amount)"></span>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function adminApp() {
+            return {
+                viajeros: [],
+                viajeroSeleccionado: null,
+                gastosActivos: [],
+
+                initApp() {
+                    this.cargarResumen();
+                },
+
+                async cargarResumen() {
+                    try {
+                        const res = await fetch('/api/admin/summary');
+                        this.viajeros = await res.json();
+                    } catch (e) { console.error("Error cargando resumen", e); }
+                },
+
+                async seleccionarViajero(viajero) {
+                    this.viajeroSeleccionado = viajero;
+                    try {
+                        const res = await fetch(\`/api/travelers/\${viajero.id}/expenses\`);
+                        this.gastosActivos = await res.json();
+                    } catch (e) { console.error("Error cargando gastos", e); }
+                },
+
+                formatearMoneda(valor) {
+                    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor || 0);
+                },
+
+                formatearFecha(fechaString) {
+                    if (!fechaString) return '';
+                    const [year, month, day] = fechaString.split('-');
+                    return new Date(year, month - 1, day).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+                },
+
+                obtenerIconoConcepto(concepto) {
+                    const iconos = { 'Alimentacion': '🍽️', 'Transporte': '🚌', 'Alojamiento': '🏨', 'Representacion': '🤝', 'Otros': '📦' };
+                    return iconos[concepto] || '📝';
+                },
+
+                obtenerColorConcepto(concepto) {
+                    const colores = { 'Alimentacion': 'bg-gray-100 text-black', 'Transporte': 'bg-red-50 text-red-600', 'Alojamiento': 'bg-gray-100 text-gray-800', 'Representacion': 'bg-black text-white', 'Otros': 'bg-gray-200 text-black' };
+                    return colores[concepto] || 'bg-gray-100 text-gray-500';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

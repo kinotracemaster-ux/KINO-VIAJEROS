@@ -199,7 +199,7 @@
                 async cargarGastos() {
                     if (!this.viajero) return;
                     try {
-                        const res = await fetch(\`/api/travelers/\${this.viajero.id}/expenses\`);
+                        const res = await fetch(`/api/travelers/${this.viajero.id}/expenses`);
                         this.gastos = await res.json();
                     } catch (e) { console.error("Error", e); }
                 },
@@ -207,7 +207,7 @@
                 async agregarGasto() {
                     if (this.nuevoGasto.date && this.nuevoGasto.concept && this.nuevoGasto.amount > 0) {
                         try {
-                            const res = await fetch(\`/api/travelers/\${this.viajero.id}/expenses\`, {
+                            const res = await fetch(`/api/travelers/${this.viajero.id}/expenses`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(this.nuevoGasto)
@@ -222,7 +222,7 @@
 
                 async eliminarGasto(id) {
                     try {
-                        await fetch(\`/api/expenses/\${id}\`, { method: 'DELETE' });
+                        await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
                         this.gastos = this.gastos.filter(g => g.id !== id);
                     } catch (e) { console.error("Error", e); }
                 },

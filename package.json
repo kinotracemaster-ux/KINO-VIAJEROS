@@ -1,0 +1,11 @@
+{
+  "name": "kino-viajeros",
+  "version": "1.0.0",
+  "description": "Control de Gastos de Ruta - Colombia",
+  "scripts": {
+    "start": "serve -p ${PORT:-3000} -s ."
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  }
+}

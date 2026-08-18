@@ -2,9 +2,17 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Ruta de la base de datos. En Railway se apunta a un volumen persistente
+// definiendo DB_PATH (ej. /data/viajeros.db). En local usa ./viajeros.db.
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'viajeros.db');
+
+// Asegurar que la carpeta del volumen exista antes de abrir la DB
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 // Middleware
 app.use(cors());
@@ -12,11 +20,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Inicializar DB
-const db = new sqlite3.Database('./viajeros.db', (err) => {
+const db = new sqlite3.Database(DB_PATH, (err) => {
     if (err) {
         console.error('Error abriendo DB', err.message);
     } else {
-        console.log('Conectado a la base de datos SQLite.');
+        console.log(`Conectado a la base de datos SQLite en ${DB_PATH}`);
         db.run(`CREATE TABLE IF NOT EXISTS travelers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,

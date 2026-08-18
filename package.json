@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "description": "Control de Gastos de Ruta - Colombia",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:css": "tailwindcss -c tailwind.config.js -i ./src/tailwind.css -o ./public/vendor/tailwind.css --minify"
   },
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
   }
 }

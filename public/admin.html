@@ -3,60 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0b0f">
     <title>Admin - Control de Gastos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; overflow-x: hidden; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        :root{
+            --bg:#f4f5f7;--surface:#ffffff;--surface-2:#fafafb;
+            --ink:#0b0b0f;--ink-soft:#3f3f46;--muted:#8b8b96;
+            --line:#ececed;--line-strong:#e0e0e3;
+            --brand:#e11d2a;--brand-dark:#b3141f;--brand-soft:#fde8e9;
+            --radius:20px;--radius-sm:14px;--radius-lg:28px;
+            --shadow-sm:0 1px 2px rgba(16,16,20,.06),0 1px 3px rgba(16,16,20,.05);
+            --shadow-md:0 8px 24px -8px rgba(16,16,20,.18),0 2px 6px rgba(16,16,20,.06);
+            --shadow-lg:0 24px 60px -20px rgba(16,16,20,.35);
+            --shadow-brand:0 12px 28px -10px rgba(225,29,42,.55);
+            --ease:cubic-bezier(.22,.61,.36,1);
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+            color:var(--ink);background:var(--bg);
+            background-image:
+                radial-gradient(1000px 480px at 100% -10%,#fdf2f2 0%,transparent 60%),
+                radial-gradient(900px 460px at -10% 0%,#eef0f4 0%,transparent 55%);
+            background-attachment:fixed;-webkit-font-smoothing:antialiased;
+            overflow-x:hidden;padding-bottom:40px;
+        }
+        ::selection{background:var(--brand-soft);color:var(--brand-dark)}
+        a{color:inherit;text-decoration:none}
+        h1,h2,h3,p{margin:0}
+        [x-cloak]{display:none!important}
+        .shell{max-width:1200px;margin:0 auto;padding:28px 20px}
+        @media(min-width:768px){.shell{padding:44px 32px}}
+
+        .custom-scrollbar::-webkit-scrollbar{width:8px}
+        .custom-scrollbar::-webkit-scrollbar-track{background:transparent}
+        .custom-scrollbar::-webkit-scrollbar-thumb{background:#dcdce0;border-radius:20px;border:2px solid var(--surface)}
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover{background:#c2c2c8}
+
+        /* header */
+        .app-header{display:flex;flex-direction:column;gap:18px;margin-bottom:30px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+        @media(min-width:768px){.app-header{flex-direction:row;align-items:center;justify-content:space-between}}
+        .brand{display:flex;align-items:center;gap:15px}
+        .brand-icon{flex:none;width:54px;height:54px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:26px;
+            background:linear-gradient(135deg,#17171d,#0b0b0f);box-shadow:var(--shadow-lg);border:1px solid #2a2a31}
+        .brand h1{font-size:1.7rem;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+        .brand .sub{color:var(--muted);font-weight:500;font-size:.92rem;margin-top:3px}
+        .btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;font-size:.9rem;font-weight:800;
+            background:var(--surface);color:var(--ink-soft);border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
+            box-shadow:var(--shadow-sm);cursor:pointer;transition:border-color .16s,transform .16s,color .16s}
+        .btn-ghost:hover{border-color:var(--brand);color:var(--brand);transform:translateY(-1px)}
+
+        .layout{display:grid;grid-template-columns:1fr;gap:22px}
+        @media(min-width:1000px){.layout{grid-template-columns:1fr 2fr;gap:26px}}
+
+        .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
+            display:flex;flex-direction:column;overflow:hidden;height:76vh;min-height:520px}
+
+        .panel-head{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+        .panel-head h2{font-size:1.15rem;font-weight:800;letter-spacing:-.01em}
+        .count-pill{font-size:.72rem;font-weight:800;color:var(--brand-dark);background:var(--brand-soft);padding:5px 11px;border-radius:999px}
+
+        .list{list-style:none;margin:0;padding:6px;overflow-y:auto;flex:1}
+
+        /* traveler item */
+        .traveler{padding:15px 16px;border-radius:16px;cursor:pointer;transition:background .16s var(--ease);position:relative}
+        .traveler:hover{background:var(--surface-2)}
+        .traveler+.traveler{margin-top:2px}
+        .traveler.active{background:var(--brand-soft)}
+        .traveler.active::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:0 4px 4px 0;background:var(--brand)}
+        .traveler .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+        .traveler .name{font-size:1.02rem;font-weight:800;letter-spacing:-.01em}
+        .traveler .dates{font-size:.74rem;color:var(--muted);font-weight:700;margin-top:4px}
+        .traveler .amount{font-size:.95rem;font-weight:800;color:var(--brand-dark);white-space:nowrap}
+        .traveler .cnt{font-size:.72rem;color:#a5a5ad;font-weight:700;margin-top:3px;text-align:right}
+
+        /* detail header (dark) */
+        .detail-head{padding:24px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px;
+            background:linear-gradient(150deg,#17171d 0%,#0b0b0f 60%,#211013 100%);color:#fff;position:relative;overflow:hidden}
+        .detail-head::after{content:"";position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;
+            background:radial-gradient(circle,rgba(225,29,42,.35) 0%,transparent 70%)}
+        .detail-head h2{position:relative;font-size:1.4rem;font-weight:900;letter-spacing:-.02em}
+        .detail-head .movs{position:relative;color:#9a9aa4;font-size:.85rem;font-weight:500;margin-top:3px}
+        .detail-head .tot-lbl{position:relative;font-size:.66rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8b8b96;text-align:right}
+        .detail-head .tot-val{position:relative;font-size:1.9rem;font-weight:900;letter-spacing:-.03em;color:#fff;text-align:right;line-height:1;margin-top:5px}
+
+        /* expense rows */
+        .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;transition:background .16s}
+        .row:hover{background:var(--surface-2)}
+        .row+.row{margin-top:2px}
+        .row-left{display:flex;align-items:center;gap:14px;min-width:0}
+        .cat-icon{flex:none;width:48px;height:48px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line)}
+        .row-info .concept{font-size:.98rem;font-weight:800;letter-spacing:-.01em}
+        .row-info .notes{font-size:.85rem;color:var(--muted)}
+        .row-info .date{font-size:.72rem;color:#a5a5ad;font-weight:700;margin-top:3px}
+        .row .money{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+
+        .cat-alimentacion{background:#fff7ed;color:#c2410c;border-color:#fde4c9}
+        .cat-transporte{background:var(--brand-soft);color:var(--brand-dark);border-color:#f8d0d3}
+        .cat-alojamiento{background:#eff6ff;color:#1d4ed8;border-color:#d7e6fe}
+        .cat-representacion{background:#0b0b0f;color:#fff;border-color:#0b0b0f}
+        .cat-otros{background:#f3f4f6;color:#3f3f46;border-color:#e6e7ea}
+        .cat-default{background:#f3f4f6;color:#8b8b96;border-color:#e6e7ea}
+
+        .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:56px 24px;gap:10px;color:var(--muted)}
+        .empty .em{font-size:48px}
+        .empty p{font-weight:800;color:var(--ink-soft);font-size:1.05rem}
+        .empty span{font-size:.88rem;font-weight:500}
+        .msg{padding:36px 24px;text-align:center;color:var(--muted);font-weight:700}
     </style>
 </head>
-<body class="text-black antialiased selection:bg-red-200 selection:text-red-900 pb-20">
+<body>
 
-    <div x-data="adminApp()" x-init="initApp()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-10">
-        
+    <div x-data="adminApp()" x-init="initApp()" x-cloak class="shell">
+
         <!-- Encabezado -->
-        <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 pb-6">
-            <div>
-                <h1 class="text-3xl font-bold text-black flex items-center">
-                    <span class="bg-black text-white p-2 rounded-xl mr-3">👑</span>
-                    Panel Administrativo
-                </h1>
-                <p class="text-gray-500 mt-2 font-medium">Control general de gastos de viajeros</p>
+        <header class="app-header">
+            <div class="brand">
+                <span class="brand-icon">👑</span>
+                <div>
+                    <h1>Panel Administrativo</h1>
+                    <p class="sub">Control general de gastos de viajeros</p>
+                </div>
             </div>
-            <div class="flex gap-4">
-                <a href="/index.html" class="px-4 py-2 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200 transition">Volver a Viajeros</a>
-            </div>
+            <a href="/index.html" class="btn-ghost">
+                <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Volver a Viajeros
+            </a>
         </header>
 
-        <!-- Contenedor Principal (2 Columnas) -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+        <div class="layout">
             <!-- Lista de Viajeros -->
-            <div class="lg:col-span-1 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden h-[75vh] flex flex-col">
-                <div class="p-5 border-b border-gray-100 bg-gray-50">
-                    <h2 class="text-xl font-bold text-black">Viajeros Activos</h2>
+            <div class="card">
+                <div class="panel-head">
+                    <h2>Viajeros Activos</h2>
+                    <span class="count-pill" x-show="viajeros.length > 0" x-text="viajeros.length"></span>
                 </div>
-                <div x-show="viajeros.length === 0" class="p-8 text-center text-gray-500 font-bold">
-                    No hay viajeros registrados aún.
-                </div>
-                <ul class="divide-y divide-gray-100 overflow-y-auto custom-scrollbar flex-1">
+                <div x-show="viajeros.length === 0" class="msg">No hay viajeros registrados aún.</div>
+                <ul class="list custom-scrollbar">
                     <template x-for="v in viajeros" :key="v.id">
-                        <li @click="seleccionarViajero(v)" 
-                            class="p-5 cursor-pointer hover:bg-red-50 transition-colors"
-                            :class="{'bg-red-50 border-l-4 border-red-600': viajeroSeleccionado?.id === v.id}">
-                            <div class="flex justify-between items-start">
+                        <li @click="seleccionarViajero(v)" class="traveler" :class="{'active': viajeroSeleccionado?.id === v.id}">
+                            <div class="top">
                                 <div>
-                                    <p class="font-bold text-lg text-black" x-text="v.name"></p>
-                                    <p class="text-xs text-gray-500 font-bold mt-1" x-text="`${formatearFecha(v.departure_date)} - ${formatearFecha(v.arrival_date)}`"></p>
+                                    <p class="name" x-text="v.name"></p>
+                                    <p class="dates" x-text="`${formatearFecha(v.departure_date)} — ${formatearFecha(v.arrival_date)}`"></p>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-bold text-red-600" x-text="formatearMoneda(v.total_expenses)"></p>
-                                    <p class="text-xs text-gray-400 font-bold mt-1" x-text="`${v.expense_count} gastos`"></p>
+                                <div>
+                                    <p class="amount" x-text="formatearMoneda(v.total_expenses)"></p>
+                                    <p class="cnt" x-text="`${v.expense_count} gastos`"></p>
                                 </div>
                             </div>
                         </li>
@@ -64,49 +161,42 @@
                 </ul>
             </div>
 
-            <!-- Detalles del Viajero Seleccionado -->
-            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden h-[75vh] flex flex-col">
+            <!-- Detalle -->
+            <div class="card">
                 <template x-if="!viajeroSeleccionado">
-                    <div class="flex-1 flex flex-col items-center justify-center p-12 text-center text-gray-400">
-                        <span class="text-6xl mb-4">👆</span>
-                        <p class="text-xl font-bold">Selecciona un viajero para ver sus gastos</p>
+                    <div class="empty">
+                        <span class="em">👆</span>
+                        <p>Selecciona un viajero</p>
+                        <span>Elige alguien de la lista para ver sus gastos.</span>
                     </div>
                 </template>
 
                 <template x-if="viajeroSeleccionado">
-                    <div class="flex flex-col h-full">
-                        <!-- Cabecera del detalle -->
-                        <div class="p-6 border-b border-gray-100 bg-black text-white flex justify-between items-center">
+                    <div style="display:flex;flex-direction:column;height:100%">
+                        <div class="detail-head">
                             <div>
-                                <h2 class="text-2xl font-bold" x-text="`Gastos de ${viajeroSeleccionado.name}`"></h2>
-                                <p class="text-gray-400 text-sm mt-1" x-text="`${gastosActivos.length} movimientos registrados`"></p>
+                                <h2 x-text="`Gastos de ${viajeroSeleccionado.name}`"></h2>
+                                <p class="movs" x-text="`${gastosActivos.length} movimientos registrados`"></p>
                             </div>
-                            <div class="text-right">
-                                <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Total Gastado</p>
-                                <p class="text-3xl font-bold text-red-500" x-text="formatearMoneda(viajeroSeleccionado.total_expenses)"></p>
+                            <div>
+                                <p class="tot-lbl">Total Gastado</p>
+                                <p class="tot-val" x-text="formatearMoneda(viajeroSeleccionado.total_expenses)"></p>
                             </div>
                         </div>
 
-                        <!-- Lista de gastos -->
-                        <ul class="divide-y divide-gray-100 overflow-y-auto custom-scrollbar flex-1 p-2">
-                            <li x-show="gastosActivos.length === 0" class="p-8 text-center text-gray-500 font-bold">
-                                Este viajero no tiene gastos registrados.
-                            </li>
+                        <ul class="list custom-scrollbar">
+                            <li x-show="gastosActivos.length === 0" class="msg">Este viajero no tiene gastos registrados.</li>
                             <template x-for="gasto in gastosActivos" :key="gasto.id">
-                                <li class="p-5 hover:bg-gray-50 flex items-center justify-between">
-                                    <div class="flex items-center space-x-4">
-                                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border border-gray-100" 
-                                            :class="obtenerColorConcepto(gasto.concept)" 
-                                            x-text="obtenerIconoConcepto(gasto.concept)"></div>
-                                        <div>
-                                            <p class="text-base font-bold text-black" x-text="gasto.concept"></p>
-                                            <p class="text-sm text-gray-500" x-text="gasto.notes"></p>
-                                            <p class="text-xs text-gray-400 font-bold mt-1" x-text="formatearFecha(gasto.date)"></p>
+                                <li class="row">
+                                    <div class="row-left">
+                                        <div class="cat-icon" :class="obtenerColorConcepto(gasto.concept)" x-text="obtenerIconoConcepto(gasto.concept)"></div>
+                                        <div class="row-info">
+                                            <p class="concept" x-text="gasto.concept"></p>
+                                            <p class="notes" x-show="gasto.notes" x-text="gasto.notes"></p>
+                                            <p class="date" x-text="formatearFecha(gasto.date)"></p>
                                         </div>
                                     </div>
-                                    <div class="text-right">
-                                        <span class="text-lg font-bold text-black" x-text="formatearMoneda(gasto.amount)"></span>
-                                    </div>
+                                    <span class="money" x-text="formatearMoneda(gasto.amount)"></span>
                                 </li>
                             </template>
                         </ul>
@@ -158,8 +248,8 @@
                 },
 
                 obtenerColorConcepto(concepto) {
-                    const colores = { 'Alimentacion': 'bg-gray-100 text-black', 'Transporte': 'bg-red-50 text-red-600', 'Alojamiento': 'bg-gray-100 text-gray-800', 'Representacion': 'bg-black text-white', 'Otros': 'bg-gray-200 text-black' };
-                    return colores[concepto] || 'bg-gray-100 text-gray-500';
+                    const colores = { 'Alimentacion': 'cat-alimentacion', 'Transporte': 'cat-transporte', 'Alojamiento': 'cat-alojamiento', 'Representacion': 'cat-representacion', 'Otros': 'cat-otros' };
+                    return colores[concepto] || 'cat-default';
                 }
             }
         }

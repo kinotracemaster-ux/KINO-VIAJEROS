@@ -158,11 +158,52 @@
         .del-traveler:hover{color:var(--brand);background:var(--brand-soft)}
         .del-traveler svg{width:17px;height:17px}
         .traveler .top{align-items:center}
+
+        /* pantalla de acceso admin */
+        .login-overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;
+            background:radial-gradient(900px 500px at 50% -10%,#211013 0%,#0b0b0f 60%);}
+        .login-card{background:var(--surface);width:100%;max-width:400px;border-radius:var(--radius-lg);padding:36px 30px;
+            box-shadow:var(--shadow-lg);text-align:center;animation:pop .4s var(--ease)}
+        @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+        .login-badge{display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:19px;
+            font-size:28px;background:linear-gradient(135deg,#17171d,#0b0b0f);box-shadow:var(--shadow-lg);margin-bottom:18px}
+        .login-card h2{font-size:1.5rem;font-weight:900;letter-spacing:-.02em;margin-bottom:4px}
+        .login-card p{color:var(--muted);font-weight:500;font-size:.92rem;margin-bottom:22px}
+        .login-input{width:100%;padding:14px 16px;font-size:1.15rem;font-weight:700;text-align:center;letter-spacing:.25em;
+            color:var(--ink);background:var(--surface-2);border:1.5px solid var(--line-strong);border-radius:14px;outline:none;
+            transition:border-color .16s,box-shadow .16s}
+        .login-input:focus{border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-soft)}
+        .login-btn{width:100%;margin-top:14px;padding:14px;font-size:1rem;font-weight:800;color:#fff;border:none;border-radius:14px;
+            cursor:pointer;background:linear-gradient(135deg,var(--brand),var(--brand-dark));box-shadow:var(--shadow-brand);
+            transition:transform .16s,filter .16s}
+        .login-btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
+        .login-error{color:var(--brand-dark);background:var(--brand-soft);font-size:.85rem;font-weight:700;
+            padding:9px 12px;border-radius:10px;margin-bottom:14px}
+        .login-back{display:inline-block;margin-top:18px;font-size:.82rem;font-weight:700;color:var(--muted)}
+        .login-back:hover{color:var(--brand)}
     </style>
 </head>
 <body>
 
-    <div x-data="adminApp()" x-init="initApp()" x-cloak class="shell">
+    <div x-data="adminApp()" x-init="initApp()" x-cloak>
+
+        <!-- Pantalla de acceso (solo si NO está autenticado) -->
+        <div x-show="!autenticado" class="login-overlay">
+            <div class="login-card">
+                <div class="login-badge">🔒</div>
+                <h2>Acceso Administrador</h2>
+                <p>Ingresa la clave para gestionar los viajeros.</p>
+                <div class="login-error" x-show="loginError" x-text="loginError"></div>
+                <form @submit.prevent="login()">
+                    <input type="password" class="login-input" x-model="loginPassword" placeholder="••••" inputmode="numeric" autofocus>
+                    <button type="submit" class="login-btn" x-text="verificando ? 'Verificando…' : 'Entrar'"></button>
+                </form>
+                <a href="/index.html" class="login-back">← Volver a Viajeros</a>
+            </div>
+        </div>
+
+    <!-- Panel (solo si está autenticado) -->
+    <div x-show="autenticado" class="shell" style="display:none">
 
         <!-- Encabezado -->
         <header class="app-header">
@@ -173,10 +214,16 @@
                     <p class="sub">Control general de gastos de viajeros</p>
                 </div>
             </div>
-            <a href="/index.html" class="btn-ghost">
-                <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                Volver a Viajeros
-            </a>
+            <div style="display:flex;gap:10px">
+                <a href="/index.html" class="btn-ghost">
+                    <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Viajeros
+                </a>
+                <button class="btn-ghost" @click="logout()">
+                    <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    Salir
+                </button>
+            </div>
         </header>
 
         <div class="layout">
@@ -207,11 +254,6 @@
                                 <label class="fl">Llegada</label>
                                 <input type="date" class="mini" x-model="nuevoViajero.arrival_date" required>
                             </div>
-                        </div>
-                        <div class="field">
-                            <label class="fl">Contraseña de administrador</label>
-                            <input type="password" class="mini" x-model="adminPassword" placeholder="••••••" required>
-                            <p class="lock-note">🔒 Requerida para crear o borrar viajeros</p>
                         </div>
                         <button type="submit" class="btn-mini" x-text="creando ? 'Creando…' : 'Crear viajero'"></button>
                     </form>
@@ -306,6 +348,7 @@
             </div>
         </div>
     </div>
+    </div>
 
     <script>
         function adminApp() {
@@ -317,7 +360,12 @@
                 mostrarForm: false,
                 creando: false,
                 formError: '',
-                adminPassword: '',
+                // Sesión de administrador
+                autenticado: false,
+                adminKey: '',
+                loginPassword: '',
+                loginError: '',
+                verificando: false,
                 nuevoViajero: {
                     name: '',
                     departure_date: new Date().toISOString().split('T')[0],
@@ -325,12 +373,53 @@
                 },
 
                 initApp() {
-                    this.cargarResumen();
+                    // Recuperar sesión previa
+                    const guardada = sessionStorage.getItem('adminKey');
+                    if (guardada) {
+                        this.adminKey = guardada;
+                        this.autenticado = true;
+                        this.cargarResumen();
+                    }
+                },
+
+                async login() {
+                    this.loginError = '';
+                    if (!this.loginPassword) { this.loginError = 'Ingresa la clave.'; return; }
+                    this.verificando = true;
+                    try {
+                        const res = await fetch('/api/admin/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: this.loginPassword })
+                        });
+                        if (!res.ok) { this.loginError = 'Clave incorrecta. Intenta de nuevo.'; return; }
+                        this.adminKey = this.loginPassword;
+                        sessionStorage.setItem('adminKey', this.adminKey);
+                        this.autenticado = true;
+                        this.loginPassword = '';
+                        this.cargarResumen();
+                    } catch (e) {
+                        this.loginError = 'Error de conexión con el servidor.';
+                    } finally {
+                        this.verificando = false;
+                    }
+                },
+
+                logout() {
+                    sessionStorage.removeItem('adminKey');
+                    this.autenticado = false;
+                    this.adminKey = '';
+                    this.viajeros = [];
+                    this.viajeroSeleccionado = null;
+                    this.gastosActivos = [];
                 },
 
                 async cargarResumen() {
                     try {
-                        const res = await fetch('/api/admin/summary');
+                        const res = await fetch('/api/admin/summary', {
+                            headers: { 'x-admin-password': this.adminKey }
+                        });
+                        if (res.status === 401) { this.logout(); return; }
                         this.viajeros = await res.json();
                     } catch (e) { console.error("Error cargando resumen", e); }
                 },
@@ -342,15 +431,15 @@
 
                 async crearViajero() {
                     this.formError = '';
-                    if (!this.adminPassword) { this.formError = 'Ingresa la contraseña de administrador.'; return; }
                     this.creando = true;
                     try {
                         const res = await fetch('/api/admin/travelers', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ...this.nuevoViajero, password: this.adminPassword })
+                            headers: { 'Content-Type': 'application/json', 'x-admin-password': this.adminKey },
+                            body: JSON.stringify(this.nuevoViajero)
                         });
                         const data = await res.json();
+                        if (res.status === 401) { this.formError = 'Sesión expirada. Vuelve a entrar.'; this.logout(); return; }
                         if (!res.ok) { this.formError = data.error || 'No se pudo crear el viajero.'; return; }
                         this.nuevoViajero.name = '';
                         this.mostrarForm = false;
@@ -364,15 +453,13 @@
 
                 async borrarViajero(v) {
                     if (!confirm(`¿Borrar a "${v.name}" y todos sus gastos? Esta acción no se puede deshacer.`)) return;
-                    let clave = this.adminPassword;
-                    if (!clave) clave = prompt('Contraseña de administrador para borrar:') || '';
-                    if (!clave) return;
                     try {
                         const res = await fetch(`/api/admin/travelers/${v.id}`, {
                             method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json', 'x-admin-password': clave }
+                            headers: { 'Content-Type': 'application/json', 'x-admin-password': this.adminKey }
                         });
                         const data = await res.json();
+                        if (res.status === 401) { alert('Sesión expirada. Vuelve a entrar.'); this.logout(); return; }
                         if (!res.ok) { alert(data.error || 'No se pudo borrar el viajero.'); return; }
                         if (this.viajeroSeleccionado?.id === v.id) {
                             this.viajeroSeleccionado = null;

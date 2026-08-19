@@ -3,151 +3,348 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0b0f">
     <title>Control de Gastos - Viajeros</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; overflow-x: hidden; }
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        /* ===== Design tokens ===== */
+        :root{
+            --bg:#f4f5f7;
+            --bg-grad-1:#fdf2f2;
+            --bg-grad-2:#eef0f4;
+            --surface:#ffffff;
+            --surface-2:#fafafb;
+            --ink:#0b0b0f;
+            --ink-soft:#3f3f46;
+            --muted:#8b8b96;
+            --line:#ececed;
+            --line-strong:#e0e0e3;
+            --brand:#e11d2a;
+            --brand-dark:#b3141f;
+            --brand-soft:#fde8e9;
+            --ok:#16a34a;
+            --radius:20px;
+            --radius-sm:14px;
+            --radius-lg:28px;
+            --shadow-sm:0 1px 2px rgba(16,16,20,.06),0 1px 3px rgba(16,16,20,.05);
+            --shadow-md:0 8px 24px -8px rgba(16,16,20,.18),0 2px 6px rgba(16,16,20,.06);
+            --shadow-lg:0 24px 60px -20px rgba(16,16,20,.35);
+            --shadow-brand:0 12px 28px -10px rgba(225,29,42,.55);
+            --ease:cubic-bezier(.22,.61,.36,1);
+        }
+
+        *{box-sizing:border-box}
+        html{-webkit-text-size-adjust:100%}
+        body{
+            margin:0;
+            font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+            color:var(--ink);
+            background:var(--bg);
+            background-image:
+                radial-gradient(1100px 520px at 100% -10%, var(--bg-grad-1) 0%, transparent 60%),
+                radial-gradient(900px 480px at -10% 0%, var(--bg-grad-2) 0%, transparent 55%);
+            background-attachment:fixed;
+            -webkit-font-smoothing:antialiased;
+            text-rendering:optimizeLegibility;
+            overflow-x:hidden;
+            padding-bottom:40px;
+        }
+        ::selection{background:var(--brand-soft);color:var(--brand-dark)}
+        a{color:inherit}
+        h1,h2,h3,p{margin:0}
+        button{font-family:inherit}
+        input,select,textarea{font-family:inherit}
+        [x-cloak]{display:none!important}
+
+        .shell{max-width:1080px;margin:0 auto;padding:28px 20px}
+        @media(min-width:768px){.shell{padding:44px 32px}}
+
+        .custom-scrollbar::-webkit-scrollbar{width:8px}
+        .custom-scrollbar::-webkit-scrollbar-track{background:transparent}
+        .custom-scrollbar::-webkit-scrollbar-thumb{background:#dcdce0;border-radius:20px;border:2px solid var(--surface)}
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover{background:#c2c2c8}
+
+        /* ===== Modal ===== */
+        .modal-overlay{
+            position:fixed;inset:0;z-index:50;
+            background:rgba(11,11,15,.55);
+            backdrop-filter:blur(8px);
+            -webkit-backdrop-filter:blur(8px);
+            display:flex;align-items:center;justify-content:center;padding:20px;
+            animation:fade .35s var(--ease);
+        }
+        .modal-card{
+            background:var(--surface);
+            width:100%;max-width:440px;
+            border-radius:var(--radius-lg);
+            box-shadow:var(--shadow-lg);
+            border:1px solid var(--line);
+            padding:34px 30px;
+            animation:pop .45s var(--ease);
+        }
+        @keyframes fade{from{opacity:0}to{opacity:1}}
+        @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+
+        .modal-badge{
+            display:inline-flex;align-items:center;justify-content:center;
+            width:56px;height:56px;border-radius:18px;font-size:26px;
+            background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);
+            box-shadow:var(--shadow-brand);margin-bottom:18px;
+        }
+        .modal-card h2{font-size:1.55rem;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+        .modal-card .sub{color:var(--muted);font-weight:500;margin-bottom:24px;font-size:.95rem}
+
+        /* ===== Form fields ===== */
+        .field{margin-bottom:16px}
+        .field-label{display:block;font-size:.8rem;font-weight:700;color:var(--ink-soft);margin-bottom:7px;letter-spacing:.01em}
+        .control{
+            width:100%;padding:13px 15px;font-size:.98rem;font-weight:500;color:var(--ink);
+            background:var(--surface-2);border:1.5px solid var(--line-strong);
+            border-radius:var(--radius-sm);outline:none;
+            transition:border-color .18s var(--ease),box-shadow .18s var(--ease),background .18s;
+        }
+        .control::placeholder{color:#b6b6bd}
+        .control:hover{border-color:#d2d2d7}
+        .control:focus{
+            border-color:var(--brand);background:var(--surface);
+            box-shadow:0 0 0 4px var(--brand-soft);
+        }
+        select.control{appearance:none;-webkit-appearance:none;cursor:pointer;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238b8b96' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat:no-repeat;background-position:right 13px center;padding-right:42px}
+        textarea.control{resize:none;line-height:1.5}
+        input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+        input[type=number]{-moz-appearance:textfield}
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+        .amount-wrap{position:relative}
+        .amount-wrap .peso{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700;font-size:1.05rem;pointer-events:none}
+        .amount-wrap .control{padding-left:32px;font-weight:800;font-size:1.05rem}
+
+        /* ===== Buttons ===== */
+        .btn{
+            display:inline-flex;align-items:center;justify-content:center;gap:8px;
+            width:100%;padding:14px 18px;font-size:1rem;font-weight:800;letter-spacing:.01em;
+            border:none;border-radius:var(--radius-sm);cursor:pointer;color:#fff;
+            background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);
+            box-shadow:var(--shadow-brand);
+            transition:transform .16s var(--ease),box-shadow .16s var(--ease),filter .16s;
+        }
+        .btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
+        .btn:active{transform:translateY(0) scale(.99)}
+        .btn svg{width:19px;height:19px}
+
+        /* ===== Header ===== */
+        .app-header{display:flex;flex-direction:column;gap:22px;margin-bottom:30px}
+        @media(min-width:820px){.app-header{flex-direction:row;align-items:center;justify-content:space-between}}
+        .brand{display:flex;align-items:center;gap:15px}
+        .brand-icon{
+            flex:none;width:54px;height:54px;border-radius:17px;
+            display:flex;align-items:center;justify-content:center;color:#fff;
+            background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);
+            box-shadow:var(--shadow-brand);
+        }
+        .brand-icon svg{width:28px;height:28px}
+        .brand h1{font-size:1.7rem;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+        .brand .who{color:var(--muted);font-weight:500;font-size:.92rem;margin-top:3px}
+        .brand .who b{color:var(--ink-soft);font-weight:700}
+
+        .total-card{
+            position:relative;overflow:hidden;
+            background:linear-gradient(150deg,#17171d 0%,#0b0b0f 55%,#211013 100%);
+            border-radius:var(--radius);padding:20px 26px;min-width:260px;
+            box-shadow:var(--shadow-lg);border:1px solid #26262d;
+        }
+        .total-card::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;
+            background:radial-gradient(circle,rgba(225,29,42,.35) 0%,transparent 70%)}
+        .total-card .lbl{position:relative;font-size:.68rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#8b8b96;margin-bottom:6px}
+        .total-card .val{position:relative;font-size:2.15rem;font-weight:900;letter-spacing:-.03em;color:#fff;line-height:1}
+        @media(min-width:820px){.total-card{text-align:right}}
+
+        /* ===== Layout grid ===== */
+        .layout{display:grid;grid-template-columns:1fr;gap:22px}
+        @media(min-width:900px){.layout{grid-template-columns:5fr 7fr;gap:26px;align-items:start}}
+
+        .card{
+            background:var(--surface);border:1px solid var(--line);
+            border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
+        }
+        .form-card{padding:26px}
+        @media(min-width:900px){.form-card{padding:30px;position:sticky;top:24px}}
+
+        .card-title{display:flex;align-items:center;gap:10px;font-size:1.15rem;font-weight:800;letter-spacing:-.01em;margin-bottom:20px}
+        .card-title .dot{width:9px;height:9px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px var(--brand-soft)}
+
+        /* ===== List ===== */
+        .list-card{display:flex;flex-direction:column;overflow:hidden;min-height:520px}
+        .list-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line)}
+        .list-head h2{font-size:1.15rem;font-weight:800;letter-spacing:-.01em}
+        .count-pill{font-size:.72rem;font-weight:800;color:var(--brand-dark);background:var(--brand-soft);padding:5px 11px;border-radius:999px}
+
+        .list{list-style:none;margin:0;padding:6px;overflow-y:auto;flex:1;max-height:640px}
+        .row{
+            display:flex;align-items:center;justify-content:space-between;gap:12px;
+            padding:14px 16px;border-radius:16px;transition:background .16s var(--ease);
+        }
+        .row:hover{background:var(--surface-2)}
+        .row+.row{margin-top:2px}
+        .row-left{display:flex;align-items:center;gap:14px;min-width:0}
+        .cat-icon{flex:none;width:48px;height:48px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line)}
+        .row-info{min-width:0}
+        .row-info .concept{font-size:.98rem;font-weight:800;letter-spacing:-.01em}
+        .row-info .notes{font-size:.85rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+        .row-info .date{font-size:.72rem;color:#a5a5ad;font-weight:700;margin-top:3px}
+        .row-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+        .row-right .money{font-size:1.05rem;font-weight:800;letter-spacing:-.02em}
+        .del-btn{background:none;border:none;cursor:pointer;color:var(--brand);font-size:.72rem;font-weight:800;padding:2px 0;transition:opacity .16s,color .16s}
+        .del-btn:hover{color:var(--brand-dark)}
+        @media(min-width:768px){.del-btn{opacity:0}.row:hover .del-btn{opacity:1}}
+
+        /* category tints */
+        .cat-alimentacion{background:#fff7ed;color:#c2410c;border-color:#fde4c9}
+        .cat-transporte{background:var(--brand-soft);color:var(--brand-dark);border-color:#f8d0d3}
+        .cat-alojamiento{background:#eff6ff;color:#1d4ed8;border-color:#d7e6fe}
+        .cat-representacion{background:#0b0b0f;color:#fff;border-color:#0b0b0f}
+        .cat-otros{background:#f3f4f6;color:#3f3f46;border-color:#e6e7ea}
+        .cat-default{background:#f3f4f6;color:#8b8b96;border-color:#e6e7ea}
+
+        /* empty state */
+        .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:56px 24px;gap:10px}
+        .empty .em{font-size:44px;filter:grayscale(.15)}
+        .empty p{font-weight:800;color:var(--ink-soft)}
+        .empty span{font-size:.88rem;color:var(--muted);font-weight:500}
+
+        .footer-link{text-align:center;margin-top:28px;font-size:.85rem;font-weight:700;color:var(--muted)}
+        .footer-link a{text-decoration:none;transition:color .16s;border-bottom:1.5px solid transparent}
+        .footer-link a:hover{color:var(--brand);border-bottom-color:var(--brand)}
     </style>
 </head>
-<body class="text-black antialiased selection:bg-red-200 selection:text-red-900 pb-20 md:pb-8">
+<body>
 
-    <div x-data="gastosApp()" x-init="initApp()" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-10">
-        
+    <div x-data="gastosApp()" x-init="initApp()" x-cloak class="shell">
+
         <!-- Modal Identificación Viajero -->
-        <div x-show="!viajeroRegistrado" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-200">
-                <h2 class="text-2xl font-bold text-black mb-6 flex items-center">
-                    <span class="bg-red-100 text-red-600 p-2 rounded-xl mr-3">✈️</span>
-                    Bienvenido Viajero
-                </h2>
-                <form @submit.prevent="registrarViajero" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-800 mb-1">Nombre Completo</label>
-                        <input type="text" x-model="viajeroForm.name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-none">
+        <div x-show="!viajeroRegistrado" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-badge">✈️</div>
+                <h2>Bienvenido Viajero</h2>
+                <p class="sub">Registra tu viaje para empezar a controlar tus gastos.</p>
+                <form @submit.prevent="registrarViajero">
+                    <div class="field">
+                        <label class="field-label">Nombre Completo</label>
+                        <input type="text" x-model="viajeroForm.name" placeholder="Ej. Juan Pérez" required class="control">
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-800 mb-1">Fecha Salida</label>
-                            <input type="date" x-model="viajeroForm.departure_date" required class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-none">
+                    <div class="grid-2">
+                        <div class="field">
+                            <label class="field-label">Fecha Salida</label>
+                            <input type="date" x-model="viajeroForm.departure_date" required class="control">
                         </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-800 mb-1">Fecha Llegada</label>
-                            <input type="date" x-model="viajeroForm.arrival_date" required class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-none">
+                        <div class="field">
+                            <label class="field-label">Fecha Llegada</label>
+                            <input type="date" x-model="viajeroForm.arrival_date" required class="control">
                         </div>
                     </div>
-                    <button type="submit" class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl transition-all">
-                        Entrar a mi plan
-                    </button>
+                    <button type="submit" class="btn" style="margin-top:8px">Entrar a mi plan</button>
                 </form>
             </div>
         </div>
 
-        <!-- App Principal (Visible solo si está registrado) -->
-        <div x-show="viajeroRegistrado" style="display: none;">
+        <!-- App Principal -->
+        <div x-show="viajeroRegistrado" style="display:none">
             <!-- Encabezado -->
-            <header class="mb-8">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div class="text-center md:text-left">
-                        <h1 class="text-3xl sm:text-4xl font-bold text-black tracking-tight flex items-center justify-center md:justify-start">
-                            <span class="bg-red-100 text-red-600 p-2 rounded-xl mr-3 shadow-sm">
-                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            </span>
-                            Gastos de Ruta
-                        </h1>
-                        <p class="text-gray-500 mt-2 font-medium">
-                            Viajero: <span class="font-bold text-gray-800" x-text="viajero?.name"></span>
-                        </p>
+            <header class="app-header">
+                <div class="brand">
+                    <span class="brand-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </span>
+                    <div>
+                        <h1>Gastos de Ruta</h1>
+                        <p class="who">Viajero: <b x-text="viajero?.name"></b></p>
                     </div>
-                    
-                    <div class="bg-black p-5 rounded-2xl shadow-lg border border-gray-800 text-center md:text-right md:min-w-[280px]">
-                        <p class="text-xs text-gray-400 font-semibold uppercase tracking-widest mb-1">Total Acumulado</p>
-                        <p class="text-3xl sm:text-4xl font-bold text-white tracking-tight" x-text="formatearMoneda(calcularTotal())"></p>
-                    </div>
+                </div>
+
+                <div class="total-card">
+                    <p class="lbl">Total Acumulado</p>
+                    <p class="val" x-text="formatearMoneda(calcularTotal())"></p>
                 </div>
             </header>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 lg:gap-8">
+            <div class="layout">
                 <!-- Columna Izquierda: Formulario -->
-                <div class="md:col-span-1 lg:col-span-5">
-                    <div class="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sm:p-8 lg:sticky lg:top-6">
-                        <h2 class="text-xl font-bold text-black mb-6 flex items-center">Nuevo Gasto</h2>
-                        <form @submit.prevent="agregarGasto" class="space-y-5">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-800 mb-1.5">Fecha</label>
-                                <input type="date" x-model="nuevoGasto.date" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-none shadow-sm">
+                <div class="card form-card">
+                    <h2 class="card-title"><span class="dot"></span>Nuevo Gasto</h2>
+                    <form @submit.prevent="agregarGasto">
+                        <div class="field">
+                            <label class="field-label">Fecha</label>
+                            <input type="date" x-model="nuevoGasto.date" required class="control">
+                        </div>
+                        <div class="field">
+                            <label class="field-label">Categoría</label>
+                            <select x-model="nuevoGasto.concept" required class="control">
+                                <option value="" disabled selected>Selecciona...</option>
+                                <option value="Alimentacion">🍽️ Alimentación</option>
+                                <option value="Transporte">🚌 Transporte</option>
+                                <option value="Alojamiento">🏨 Alojamiento</option>
+                                <option value="Representacion">🤝 Representación</option>
+                                <option value="Otros">📦 Otros</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label class="field-label">Valor (COP)</label>
+                            <div class="amount-wrap">
+                                <span class="peso">$</span>
+                                <input type="number" x-model="nuevoGasto.amount" required min="1" step="1" inputmode="numeric" placeholder="0" class="control">
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-800 mb-1.5">Categoría</label>
-                                <select x-model="nuevoGasto.concept" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-none shadow-sm appearance-none">
-                                    <option value="" disabled selected>Selecciona...</option>
-                                    <option value="Alimentacion">🍽️ Alimentación</option>
-                                    <option value="Transporte">🚌 Transporte</option>
-                                    <option value="Alojamiento">🏨 Alojamiento</option>
-                                    <option value="Representacion">🤝 Representación</option>
-                                    <option value="Otros">📦 Otros</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-800 mb-1.5">Valor (COP)</label>
-                                <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><span class="text-gray-500 font-medium text-lg">$</span></div>
-                                    <input type="number" x-model="nuevoGasto.amount" required min="1" step="1" inputmode="numeric" class="w-full pl-9 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-none font-bold text-black shadow-sm">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-800 mb-1.5">Notas</label>
-                                <textarea x-model="nuevoGasto.notes" rows="2" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-none shadow-sm resize-none"></textarea>
-                            </div>
-                            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-lg py-3.5 rounded-xl transition-all shadow-md mt-2 flex justify-center items-center">
-                                Registrar Gasto
-                            </button>
-                        </form>
-                    </div>
+                        </div>
+                        <div class="field">
+                            <label class="field-label">Notas</label>
+                            <textarea x-model="nuevoGasto.notes" rows="2" placeholder="Detalle opcional…" class="control"></textarea>
+                        </div>
+                        <button type="submit" class="btn" style="margin-top:8px">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"></path></svg>
+                            Registrar Gasto
+                        </button>
+                    </form>
                 </div>
 
                 <!-- Columna Derecha: Lista -->
-                <div class="md:col-span-1 lg:col-span-7">
-                    <div class="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full min-h-[500px]">
-                        <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white/50">
-                            <h2 class="text-xl font-bold text-black">Historial Reciente</h2>
-                        </div>
-
-                        <div x-show="gastos.length === 0" class="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                            <p class="text-lg font-bold text-gray-800">Tu historial está vacío</p>
-                        </div>
-
-                        <ul x-show="gastos.length > 0" class="divide-y divide-gray-100 custom-scrollbar overflow-y-auto flex-1 max-h-[600px]">
-                            <template x-for="gasto in gastos" :key="gasto.id">
-                                <li class="p-5 hover:bg-gray-50 group flex items-center justify-between">
-                                    <div class="flex items-center space-x-4">
-                                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border border-gray-100" :class="obtenerColorConcepto(gasto.concept)" x-text="obtenerIconoConcepto(gasto.concept)"></div>
-                                        <div>
-                                            <p class="text-base font-bold text-black" x-text="gasto.concept"></p>
-                                            <p class="text-sm text-gray-500" x-text="gasto.notes"></p>
-                                            <p class="text-xs text-gray-400 font-bold mt-1" x-text="formatearFecha(gasto.date)"></p>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end">
-                                        <span class="text-lg font-bold text-black" x-text="formatearMoneda(gasto.amount)"></span>
-                                        <button @click="eliminarGasto(gasto.id)" class="mt-2 text-red-500 text-xs font-bold md:opacity-0 md:group-hover:opacity-100 transition-opacity">Borrar</button>
-                                    </div>
-                                </li>
-                            </template>
-                        </ul>
+                <div class="card list-card">
+                    <div class="list-head">
+                        <h2>Historial Reciente</h2>
+                        <span class="count-pill" x-show="gastos.length > 0" x-text="`${gastos.length} gastos`"></span>
                     </div>
+
+                    <div x-show="gastos.length === 0" class="empty">
+                        <div class="em">🧾</div>
+                        <p>Tu historial está vacío</p>
+                        <span>Registra tu primer gasto en el formulario.</span>
+                    </div>
+
+                    <ul x-show="gastos.length > 0" class="list custom-scrollbar">
+                        <template x-for="gasto in gastos" :key="gasto.id">
+                            <li class="row">
+                                <div class="row-left">
+                                    <div class="cat-icon" :class="obtenerColorConcepto(gasto.concept)" x-text="obtenerIconoConcepto(gasto.concept)"></div>
+                                    <div class="row-info">
+                                        <p class="concept" x-text="gasto.concept"></p>
+                                        <p class="notes" x-show="gasto.notes" x-text="gasto.notes"></p>
+                                        <p class="date" x-text="formatearFecha(gasto.date)"></p>
+                                    </div>
+                                </div>
+                                <div class="row-right">
+                                    <span class="money" x-text="formatearMoneda(gasto.amount)"></span>
+                                    <button @click="eliminarGasto(gasto.id)" class="del-btn">Borrar</button>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
                 </div>
             </div>
-            <div class="text-center mt-6 text-sm text-gray-500 font-bold">
-                <a href="/admin.html" class="hover:text-red-600 underline">Acceso Administrador</a>
-            </div>
+
+            <p class="footer-link"><a href="/admin.html">Acceso Administrador →</a></p>
         </div>
     </div>
 
@@ -247,8 +444,8 @@
                 },
 
                 obtenerColorConcepto(concepto) {
-                    const colores = { 'Alimentacion': 'bg-gray-100 text-black', 'Transporte': 'bg-red-50 text-red-600', 'Alojamiento': 'bg-gray-100 text-gray-800', 'Representacion': 'bg-black text-white', 'Otros': 'bg-gray-200 text-black' };
-                    return colores[concepto] || 'bg-gray-100 text-gray-500';
+                    const colores = { 'Alimentacion': 'cat-alimentacion', 'Transporte': 'cat-transporte', 'Alojamiento': 'cat-alojamiento', 'Representacion': 'cat-representacion', 'Otros': 'cat-otros' };
+                    return colores[concepto] || 'cat-default';
                 }
             }
         }

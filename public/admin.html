@@ -115,6 +115,20 @@
         .empty span{font-size:.88rem;font-weight:500}
         .msg{padding:36px 24px;text-align:center;color:var(--muted);font-weight:700}
 
+        /* acordeón de gastos agrupados por fecha */
+        .date-group{border:1px solid var(--line);border-radius:16px;margin:8px 6px;overflow:hidden;background:var(--surface)}
+        .date-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;cursor:pointer;transition:background .16s}
+        .date-head:hover{background:var(--surface-2)}
+        .date-head.open{background:var(--surface-2)}
+        .date-left{display:flex;align-items:center;gap:12px;min-width:0}
+        .chev{flex:none;width:18px;height:18px;color:var(--muted);transition:transform .2s var(--ease)}
+        .chev.open{transform:rotate(90deg);color:var(--brand)}
+        .date-title{font-size:.98rem;font-weight:800;letter-spacing:-.01em;text-transform:capitalize}
+        .date-sub{font-size:.72rem;color:var(--muted);font-weight:700;margin-top:2px}
+        .date-right{text-align:right;flex:none}
+        .date-total{font-size:1.02rem;font-weight:800;color:var(--brand-dark);white-space:nowrap}
+        .date-body{border-top:1px solid var(--line);padding:4px}
+
         /* boton nuevo viajero */
         .btn-add{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;font-size:.82rem;font-weight:800;
             color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-dark));border:none;border-radius:11px;
@@ -250,22 +264,43 @@
                             </div>
                         </div>
 
-                        <ul class="list custom-scrollbar">
-                            <li x-show="gastosActivos.length === 0" class="msg">Este viajero no tiene gastos registrados.</li>
-                            <template x-for="gasto in gastosActivos" :key="gasto.id">
-                                <li class="row">
-                                    <div class="row-left">
-                                        <div class="cat-icon" :class="obtenerColorConcepto(gasto.concept)" x-text="obtenerIconoConcepto(gasto.concept)"></div>
-                                        <div class="row-info">
-                                            <p class="concept" x-text="gasto.concept"></p>
-                                            <p class="notes" x-show="gasto.notes" x-text="gasto.notes"></p>
-                                            <p class="date" x-text="formatearFecha(gasto.date)"></p>
+                        <div class="list custom-scrollbar">
+                            <div x-show="gastosActivos.length === 0" class="msg">Este viajero no tiene gastos registrados.</div>
+
+                            <template x-for="grupo in gastosPorFecha()" :key="grupo.fecha">
+                                <div class="date-group">
+                                    <!-- Cabecera de la fecha (clic para desplegar) -->
+                                    <div class="date-head" :class="{'open': fechaAbierta === grupo.fecha}" @click="toggleFecha(grupo.fecha)">
+                                        <div class="date-left">
+                                            <svg class="chev" :class="{'open': fechaAbierta === grupo.fecha}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M9 5l7 7-7 7"></path></svg>
+                                            <div>
+                                                <p class="date-title" x-text="formatearFechaLarga(grupo.fecha)"></p>
+                                                <p class="date-sub" x-text="`${grupo.items.length} ${grupo.items.length === 1 ? 'gasto' : 'gastos'}`"></p>
+                                            </div>
+                                        </div>
+                                        <div class="date-right">
+                                            <p class="date-total" x-text="formatearMoneda(grupo.total)"></p>
                                         </div>
                                     </div>
-                                    <span class="money" x-text="formatearMoneda(gasto.amount)"></span>
-                                </li>
+
+                                    <!-- Gastos de esa fecha -->
+                                    <div class="date-body" x-show="fechaAbierta === grupo.fecha" x-transition>
+                                        <template x-for="gasto in grupo.items" :key="gasto.id">
+                                            <div class="row">
+                                                <div class="row-left">
+                                                    <div class="cat-icon" :class="obtenerColorConcepto(gasto.concept)" x-text="obtenerIconoConcepto(gasto.concept)"></div>
+                                                    <div class="row-info">
+                                                        <p class="concept" x-text="gasto.concept"></p>
+                                                        <p class="notes" x-show="gasto.notes" x-text="gasto.notes"></p>
+                                                    </div>
+                                                </div>
+                                                <span class="money" x-text="formatearMoneda(gasto.amount)"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </template>
-                        </ul>
+                        </div>
                     </div>
                 </template>
             </div>
@@ -278,6 +313,7 @@
                 viajeros: [],
                 viajeroSeleccionado: null,
                 gastosActivos: [],
+                fechaAbierta: null,
                 mostrarForm: false,
                 creando: false,
                 formError: '',
@@ -350,10 +386,30 @@
 
                 async seleccionarViajero(viajero) {
                     this.viajeroSeleccionado = viajero;
+                    this.fechaAbierta = null;
                     try {
                         const res = await fetch(`/api/travelers/${viajero.id}/expenses`);
                         this.gastosActivos = await res.json();
                     } catch (e) { console.error("Error cargando gastos", e); }
+                },
+
+                // Agrupa los gastos por fecha (más reciente primero)
+                gastosPorFecha() {
+                    const grupos = {};
+                    this.gastosActivos.forEach(g => {
+                        (grupos[g.date] = grupos[g.date] || []).push(g);
+                    });
+                    return Object.keys(grupos)
+                        .sort((a, b) => b.localeCompare(a))
+                        .map(fecha => ({
+                            fecha,
+                            items: grupos[fecha],
+                            total: grupos[fecha].reduce((s, x) => s + parseFloat(x.amount), 0)
+                        }));
+                },
+
+                toggleFecha(fecha) {
+                    this.fechaAbierta = this.fechaAbierta === fecha ? null : fecha;
                 },
 
                 formatearMoneda(valor) {
@@ -364,6 +420,12 @@
                     if (!fechaString) return '';
                     const [year, month, day] = fechaString.split('-');
                     return new Date(year, month - 1, day).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+                },
+
+                formatearFechaLarga(fechaString) {
+                    if (!fechaString) return '';
+                    const [year, month, day] = fechaString.split('-');
+                    return new Date(year, month - 1, day).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                 },
 
                 obtenerIconoConcepto(concepto) {

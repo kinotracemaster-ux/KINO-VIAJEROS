@@ -96,6 +96,10 @@
         }
         .modal-card h2{font-size:1.55rem;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
         .modal-card .sub{color:var(--muted);font-weight:500;margin-bottom:24px;font-size:.95rem}
+        .modal-hint{margin-top:14px;text-align:center;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.5}
+        .no-travelers{text-align:center;padding:8px 0 4px}
+        .no-travelers p{font-weight:800;color:var(--ink-soft);font-size:1.02rem;margin-bottom:4px}
+        .no-travelers span{display:block;font-size:.88rem;color:var(--muted);font-weight:500;line-height:1.5}
 
         /* ===== Form fields ===== */
         .field{margin-bottom:16px}
@@ -151,6 +155,9 @@
         .brand h1{font-size:1.7rem;font-weight:900;letter-spacing:-.03em;line-height:1.05}
         .brand .who{color:var(--muted);font-weight:500;font-size:.92rem;margin-top:3px}
         .brand .who b{color:var(--ink-soft);font-weight:700}
+        .switch-btn{margin-left:8px;font-size:.72rem;font-weight:800;color:var(--brand);background:var(--brand-soft);
+            border:none;border-radius:999px;padding:3px 10px;cursor:pointer;transition:background .16s,color .16s}
+        .switch-btn:hover{background:var(--brand);color:#fff}
 
         .total-card{
             position:relative;overflow:hidden;
@@ -231,24 +238,29 @@
             <div class="modal-card">
                 <div class="modal-badge">✈️</div>
                 <h2>Bienvenido Viajero</h2>
-                <p class="sub">Registra tu viaje para empezar a controlar tus gastos.</p>
-                <form @submit.prevent="registrarViajero">
+                <p class="sub">Selecciona tu nombre para ver y registrar tus gastos.</p>
+
+                <!-- Sí hay viajeros: seleccionar -->
+                <form @submit.prevent="entrarViajero" x-show="listaViajeros.length > 0">
                     <div class="field">
-                        <label class="field-label">Nombre Completo</label>
-                        <input type="text" x-model="viajeroForm.name" placeholder="Ej. Juan Pérez" required class="control">
-                    </div>
-                    <div class="grid-2">
-                        <div class="field">
-                            <label class="field-label">Fecha Salida</label>
-                            <input type="date" x-model="viajeroForm.departure_date" required class="control">
-                        </div>
-                        <div class="field">
-                            <label class="field-label">Fecha Llegada</label>
-                            <input type="date" x-model="viajeroForm.arrival_date" required class="control">
-                        </div>
+                        <label class="field-label">¿Quién eres?</label>
+                        <select x-model="viajeroSeleccionadoId" required class="control">
+                            <option value="" disabled selected>Selecciona tu nombre...</option>
+                            <template x-for="v in listaViajeros" :key="v.id">
+                                <option :value="v.id" x-text="v.name"></option>
+                            </template>
+                        </select>
                     </div>
                     <button type="submit" class="btn" style="margin-top:8px">Entrar a mi plan</button>
+                    <p class="modal-hint">🔒 ¿No apareces en la lista? Pide al administrador que te agregue.</p>
                 </form>
+
+                <!-- No hay viajeros aún -->
+                <div x-show="listaViajeros.length === 0" class="no-travelers">
+                    <p>Aún no hay viajeros registrados.</p>
+                    <span>El administrador debe crearlos desde el panel de administración.</span>
+                    <a href="/admin.html" class="btn" style="margin-top:16px;text-decoration:none">Ir al panel Admin</a>
+                </div>
             </div>
         </div>
 
@@ -262,7 +274,9 @@
                     </span>
                     <div>
                         <h1>Gastos de Ruta</h1>
-                        <p class="who">Viajero: <b x-text="viajero?.name"></b></p>
+                        <p class="who">Viajero: <b x-text="viajero?.name"></b>
+                            <button @click="salirViajero" class="switch-btn" title="Cambiar de viajero">Cambiar</button>
+                        </p>
                     </div>
                 </div>
 
@@ -354,11 +368,8 @@
                 viajeroRegistrado: false,
                 viajero: null,
                 gastos: [],
-                viajeroForm: {
-                    name: '',
-                    departure_date: new Date().toISOString().split('T')[0],
-                    arrival_date: new Date().toISOString().split('T')[0]
-                },
+                listaViajeros: [],
+                viajeroSeleccionadoId: '',
                 nuevoGasto: {
                     date: new Date().toISOString().split('T')[0],
                     concept: '',
@@ -372,25 +383,36 @@
                         this.viajero = JSON.parse(localViajero);
                         this.viajeroRegistrado = true;
                         this.cargarGastos();
+                    } else {
+                        this.cargarListaViajeros();
                     }
                 },
 
-                async registrarViajero() {
+                async cargarListaViajeros() {
                     try {
-                        const res = await fetch('/api/travelers', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(this.viajeroForm)
-                        });
+                        const res = await fetch('/api/travelers');
                         const data = await res.json();
-                        this.viajero = data;
-                        localStorage.setItem('viajeroApp', JSON.stringify(data));
-                        this.viajeroRegistrado = true;
-                        this.cargarGastos();
-                    } catch (e) {
-                        console.error("Error", e);
-                        alert("Error al conectar con el servidor.");
-                    }
+                        // Ordenar alfabéticamente por nombre
+                        this.listaViajeros = data.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+                    } catch (e) { console.error("Error cargando viajeros", e); }
+                },
+
+                entrarViajero() {
+                    const seleccionado = this.listaViajeros.find(v => v.id == this.viajeroSeleccionadoId);
+                    if (!seleccionado) return;
+                    this.viajero = seleccionado;
+                    localStorage.setItem('viajeroApp', JSON.stringify(seleccionado));
+                    this.viajeroRegistrado = true;
+                    this.cargarGastos();
+                },
+
+                salirViajero() {
+                    localStorage.removeItem('viajeroApp');
+                    this.viajero = null;
+                    this.viajeroRegistrado = false;
+                    this.gastos = [];
+                    this.viajeroSeleccionadoId = '';
+                    this.cargarListaViajeros();
                 },
 
                 async cargarGastos() {

@@ -198,8 +198,9 @@ app.delete('/api/admin/travelers/:id', (req, res) => {
     });
 });
 
-// Obtener resumen de todos (Admin)
+// Obtener resumen de todos (Admin, requiere contraseña)
 app.get('/api/admin/summary', (req, res) => {
+    if (!esAdmin(req)) return res.status(401).json({ error: 'No autorizado' });
     const query = `
         SELECT t.id, t.name, t.departure_date, t.arrival_date, 
                COALESCE(SUM(e.amount), 0) as total_expenses,

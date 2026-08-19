@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Contraseña de administrador (configurable con la variable de entorno ADMIN_PASSWORD)
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'kino2024';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '3312';
 function esAdmin(req) {
     const clave = req.headers['x-admin-password'] || (req.body && req.body.password);
     return clave === ADMIN_PASSWORD;

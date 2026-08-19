@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0b0f">
     <title>Control de Gastos - Viajeros</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="/alpine.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -292,6 +292,18 @@
                     <h2 class="card-title"><span class="dot"></span>Nuevo Gasto</h2>
                     <form @submit.prevent="agregarGasto">
                         <div class="field">
+                            <label class="field-label">Correría</label>
+                            <select x-model="nuevoGasto.correria_id" required class="control" x-show="correrias.length > 0">
+                                <option value="" disabled selected>Selecciona la correría...</option>
+                                <template x-for="c in correrias" :key="c.id">
+                                    <option :value="c.id" x-text="c.name"></option>
+                                </template>
+                            </select>
+                            <p x-show="correrias.length === 0" class="modal-hint" style="text-align:left;margin-top:0">
+                                ⚠️ Aún no hay correrías. Pide al administrador que cree una.
+                            </p>
+                        </div>
+                        <div class="field">
                             <label class="field-label">Fecha</label>
                             <input type="date" x-model="nuevoGasto.date" required class="control">
                         </div>
@@ -369,12 +381,14 @@
                 viajero: null,
                 gastos: [],
                 listaViajeros: [],
+                correrias: [],
                 viajeroSeleccionadoId: '',
                 nuevoGasto: {
                     date: new Date().toISOString().split('T')[0],
                     concept: '',
                     amount: '',
-                    notes: ''
+                    notes: '',
+                    correria_id: ''
                 },
 
                 initApp() {
@@ -383,9 +397,17 @@
                         this.viajero = JSON.parse(localViajero);
                         this.viajeroRegistrado = true;
                         this.cargarGastos();
+                        this.cargarCorrerias();
                     } else {
                         this.cargarListaViajeros();
                     }
+                },
+
+                async cargarCorrerias() {
+                    try {
+                        const res = await fetch('/api/correrias');
+                        this.correrias = await res.json();
+                    } catch (e) { console.error("Error cargando correrías", e); }
                 },
 
                 async cargarListaViajeros() {
@@ -404,6 +426,7 @@
                     localStorage.setItem('viajeroApp', JSON.stringify(seleccionado));
                     this.viajeroRegistrado = true;
                     this.cargarGastos();
+                    this.cargarCorrerias();
                 },
 
                 salirViajero() {
@@ -424,6 +447,10 @@
                 },
 
                 async agregarGasto() {
+                    if (this.correrias.length > 0 && !this.nuevoGasto.correria_id) {
+                        alert('Selecciona la correría para este gasto.');
+                        return;
+                    }
                     if (this.nuevoGasto.date && this.nuevoGasto.concept && this.nuevoGasto.amount > 0) {
                         try {
                             const res = await fetch(`/api/travelers/${this.viajero.id}/expenses`, {
@@ -433,6 +460,7 @@
                             });
                             const data = await res.json();
                             this.gastos.unshift(data);
+                            // Se conserva la correría seleccionada para el siguiente gasto
                             this.nuevoGasto.amount = '';
                             this.nuevoGasto.notes = '';
                         } catch (e) { console.error("Error", e); }

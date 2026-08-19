@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0b0b0f">
     <title>Admin - Control de Gastos</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="/alpine.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -181,6 +181,35 @@
             padding:9px 12px;border-radius:10px;margin-bottom:14px}
         .login-back{display:inline-block;margin-top:18px;font-size:.82rem;font-weight:700;color:var(--muted)}
         .login-back:hover{color:var(--brand)}
+
+        /* pestañas Viajeros / Correrías */
+        .tabs{display:flex;gap:8px;margin-bottom:22px}
+        .tab{display:inline-flex;align-items:center;gap:7px;padding:11px 18px;font-size:.92rem;font-weight:800;color:var(--ink-soft);
+            background:var(--surface);border:1.5px solid var(--line-strong);border-radius:14px;cursor:pointer;box-shadow:var(--shadow-sm);
+            transition:border-color .16s,color .16s,background .16s}
+        .tab:hover{border-color:var(--brand);color:var(--brand)}
+        .tab.active{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border-color:transparent;box-shadow:var(--shadow-brand)}
+
+        /* delta vs correría anterior */
+        .delta{font-size:.72rem;font-weight:800;margin-top:3px;white-space:nowrap}
+        .delta.up{color:var(--brand-dark)}   /* gastó más */
+        .delta.down{color:var(--ok)}         /* gastó menos */
+        .delta.flat{color:var(--muted)}
+
+        /* bloque de comparación */
+        .compare{margin:8px;padding:15px 16px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2)}
+        .compare-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+        .compare-head b{color:var(--ink)}
+        .compare-total{font-weight:800;white-space:nowrap}
+        .compare-row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:7px 0;font-size:.85rem;border-top:1px dashed var(--line-strong)}
+        .c-cat{font-weight:700;text-transform:capitalize}
+        .c-prev{color:var(--muted);font-weight:600;text-align:right;min-width:70px}
+        .c-arrow{font-weight:800;text-align:center;min-width:18px}
+        .c-now{font-weight:800;text-align:right;min-width:70px}
+        .up-txt{color:var(--brand-dark)}
+        .down-txt{color:var(--ok)}
+        .flat-txt{color:var(--muted)}
+        .compare-none{font-size:.85rem;color:var(--muted);font-weight:600;text-align:center;padding:4px}
     </style>
 </head>
 <body>
@@ -226,7 +255,14 @@
             </div>
         </header>
 
-        <div class="layout">
+        <!-- Pestañas -->
+        <div class="tabs">
+            <button class="tab" :class="{'active': vista === 'viajeros'}" @click="vista = 'viajeros'">👥 Viajeros</button>
+            <button class="tab" :class="{'active': vista === 'correrias'}" @click="vista = 'correrias'; cargarCorrerias()">🗺️ Correrías</button>
+        </div>
+
+        <!-- ===== VISTA VIAJEROS ===== -->
+        <div class="layout" x-show="vista === 'viajeros'">
             <!-- Lista de Viajeros -->
             <div class="card">
                 <div class="panel-head">
@@ -347,6 +383,130 @@
                 </template>
             </div>
         </div>
+
+        <!-- ===== VISTA CORRERIAS ===== -->
+        <div class="layout" x-show="vista === 'correrias'" style="display:none">
+            <!-- Lista de correrías -->
+            <div class="card">
+                <div class="panel-head">
+                    <h2>Correrías</h2>
+                    <button class="btn-add" @click="toggleFormCorreria()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M12 4v16m8-8H4"></path></svg>
+                        <span x-text="mostrarFormCorreria ? 'Cerrar' : 'Nueva'"></span>
+                    </button>
+                </div>
+
+                <!-- Formulario crear correría -->
+                <div class="create-box" x-show="mostrarFormCorreria" x-transition style="display:none">
+                    <div class="form-error" x-show="formCorreriaError" x-text="formCorreriaError"></div>
+                    <form @submit.prevent="crearCorreria()">
+                        <div class="field">
+                            <label class="fl">Nombre de la correría</label>
+                            <input type="text" class="mini" x-model="nuevaCorreria.name" placeholder="Ej. Correría Septiembre" required>
+                        </div>
+                        <div class="mini-row field">
+                            <div>
+                                <label class="fl">Inicio</label>
+                                <input type="date" class="mini" x-model="nuevaCorreria.start_date">
+                            </div>
+                            <div>
+                                <label class="fl">Fin</label>
+                                <input type="date" class="mini" x-model="nuevaCorreria.end_date">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-mini" x-text="creandoCorreria ? 'Creando…' : 'Crear correría'"></button>
+                    </form>
+                </div>
+
+                <div x-show="correrias.length === 0" class="msg">No hay correrías. Crea la primera.</div>
+                <ul class="list custom-scrollbar">
+                    <template x-for="(c, idx) in correrias" :key="c.id">
+                        <li @click="seleccionarCorreria(c)" class="traveler" :class="{'active': correriaSeleccionada?.id === c.id}">
+                            <div class="top">
+                                <div style="min-width:0">
+                                    <p class="name" x-text="c.name"></p>
+                                    <p class="dates" x-text="rangoFechas(c)"></p>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <div style="text-align:right">
+                                        <p class="amount" x-text="formatearMoneda(c.total)"></p>
+                                        <p class="delta" :class="deltaClase(idx)" x-show="idx > 0" x-text="deltaTexto(idx)"></p>
+                                        <p class="cnt" x-show="idx === 0" x-text="`${c.count} gastos`"></p>
+                                    </div>
+                                    <button class="del-traveler" @click.stop="borrarCorreria(c)" title="Borrar correría">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <!-- Detalle de correría -->
+            <div class="card">
+                <template x-if="!correriaSeleccionada">
+                    <div class="empty">
+                        <span class="em">🗺️</span>
+                        <p>Selecciona una correría</p>
+                        <span>Para ver sus gastos y compararla con la anterior.</span>
+                    </div>
+                </template>
+
+                <template x-if="correriaSeleccionada">
+                    <div style="display:flex;flex-direction:column;height:100%">
+                        <div class="detail-head">
+                            <div>
+                                <h2 x-text="correriaSeleccionada.name"></h2>
+                                <p class="movs" x-text="`${gastosCorreria.length} gastos · ${rangoFechas(correriaSeleccionada)}`"></p>
+                            </div>
+                            <div>
+                                <p class="tot-lbl">Total Correría</p>
+                                <p class="tot-val" x-text="formatearMoneda(correriaSeleccionada.total)"></p>
+                            </div>
+                        </div>
+
+                        <!-- Comparación con la correría anterior -->
+                        <template x-if="correriaAnterior()">
+                            <div class="compare">
+                                <div class="compare-head">
+                                    <span>vs <b x-text="correriaAnterior().name"></b></span>
+                                    <span class="compare-total" :class="comparacionSel()?.clase" x-text="comparacionSel()?.texto"></span>
+                                </div>
+                                <template x-for="cat in categoriasComparacion()" :key="cat.nombre">
+                                    <div class="compare-row">
+                                        <span class="c-cat" x-text="cat.nombre"></span>
+                                        <span class="c-prev" x-text="formatearMoneda(cat.anterior)"></span>
+                                        <span class="c-arrow" :class="cat.clase" x-text="cat.flecha"></span>
+                                        <span class="c-now" x-text="formatearMoneda(cat.actual)"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!correriaAnterior()">
+                            <div class="compare"><p class="compare-none">Es la primera correría: no hay anterior para comparar.</p></div>
+                        </template>
+
+                        <!-- Gastos de la correría -->
+                        <div class="list custom-scrollbar">
+                            <div x-show="gastosCorreria.length === 0" class="msg">Sin gastos en esta correría.</div>
+                            <template x-for="g in gastosCorreria" :key="g.id">
+                                <div class="row">
+                                    <div class="row-left">
+                                        <div class="cat-icon" :class="obtenerColorConcepto(g.concept)" x-text="obtenerIconoConcepto(g.concept)"></div>
+                                        <div class="row-info">
+                                            <p class="concept" x-text="g.concept"></p>
+                                            <p class="notes"><b x-text="g.traveler_name"></b> · <span x-text="formatearFecha(g.date)"></span><span x-show="g.notes" x-text="` · ${g.notes}`"></span></p>
+                                        </div>
+                                    </div>
+                                    <span class="money" x-text="formatearMoneda(g.amount)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
     </div>
     </div>
 
@@ -371,6 +531,15 @@
                     departure_date: new Date().toISOString().split('T')[0],
                     arrival_date: new Date().toISOString().split('T')[0]
                 },
+                // Correrías
+                vista: 'viajeros',
+                correrias: [],
+                correriaSeleccionada: null,
+                gastosCorreria: [],
+                mostrarFormCorreria: false,
+                creandoCorreria: false,
+                formCorreriaError: '',
+                nuevaCorreria: { name: '', start_date: '', end_date: '' },
 
                 initApp() {
                     // Recuperar sesión previa
@@ -379,6 +548,7 @@
                         this.adminKey = guardada;
                         this.autenticado = true;
                         this.cargarResumen();
+                        this.cargarCorrerias();
                     }
                 },
 
@@ -398,6 +568,7 @@
                         this.autenticado = true;
                         this.loginPassword = '';
                         this.cargarResumen();
+                        this.cargarCorrerias();
                     } catch (e) {
                         this.loginError = 'Error de conexión con el servidor.';
                     } finally {
@@ -422,6 +593,132 @@
                         if (res.status === 401) { this.logout(); return; }
                         this.viajeros = await res.json();
                     } catch (e) { console.error("Error cargando resumen", e); }
+                },
+
+                // ===== Correrías =====
+                async cargarCorrerias() {
+                    try {
+                        const res = await fetch('/api/admin/correrias/summary', { headers: { 'x-admin-password': this.adminKey } });
+                        if (res.status === 401) { this.logout(); return; }
+                        this.correrias = await res.json();
+                        // refrescar la seleccionada con datos nuevos
+                        if (this.correriaSeleccionada) {
+                            const act = this.correrias.find(c => c.id === this.correriaSeleccionada.id);
+                            this.correriaSeleccionada = act || null;
+                            if (!act) this.gastosCorreria = [];
+                        }
+                    } catch (e) { console.error("Error cargando correrías", e); }
+                },
+
+                async seleccionarCorreria(c) {
+                    this.correriaSeleccionada = c;
+                    try {
+                        const res = await fetch(`/api/admin/correrias/${c.id}/expenses`, { headers: { 'x-admin-password': this.adminKey } });
+                        if (res.status === 401) { this.logout(); return; }
+                        this.gastosCorreria = await res.json();
+                    } catch (e) { console.error("Error cargando gastos de correría", e); }
+                },
+
+                toggleFormCorreria() {
+                    this.mostrarFormCorreria = !this.mostrarFormCorreria;
+                    this.formCorreriaError = '';
+                },
+
+                async crearCorreria() {
+                    this.formCorreriaError = '';
+                    this.creandoCorreria = true;
+                    try {
+                        const res = await fetch('/api/admin/correrias', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'x-admin-password': this.adminKey },
+                            body: JSON.stringify(this.nuevaCorreria)
+                        });
+                        const data = await res.json();
+                        if (res.status === 401) { this.formCorreriaError = 'Sesión expirada. Vuelve a entrar.'; this.logout(); return; }
+                        if (!res.ok) { this.formCorreriaError = data.error || 'No se pudo crear la correría.'; return; }
+                        this.nuevaCorreria = { name: '', start_date: '', end_date: '' };
+                        this.mostrarFormCorreria = false;
+                        await this.cargarCorrerias();
+                    } catch (e) {
+                        this.formCorreriaError = 'Error de conexión con el servidor.';
+                    } finally {
+                        this.creandoCorreria = false;
+                    }
+                },
+
+                async borrarCorreria(c) {
+                    if (!confirm(`¿Borrar la correría "${c.name}"? Los gastos quedarán sin correría asignada.`)) return;
+                    try {
+                        const res = await fetch(`/api/admin/correrias/${c.id}`, {
+                            method: 'DELETE',
+                            headers: { 'x-admin-password': this.adminKey }
+                        });
+                        if (res.status === 401) { alert('Sesión expirada. Vuelve a entrar.'); this.logout(); return; }
+                        if (!res.ok) { alert('No se pudo borrar la correría.'); return; }
+                        if (this.correriaSeleccionada?.id === c.id) { this.correriaSeleccionada = null; this.gastosCorreria = []; }
+                        await this.cargarCorrerias();
+                    } catch (e) { alert('Error de conexión con el servidor.'); }
+                },
+
+                // La correría anterior (cronológicamente) a la seleccionada
+                correriaAnterior() {
+                    if (!this.correriaSeleccionada) return null;
+                    const i = this.correrias.findIndex(c => c.id === this.correriaSeleccionada.id);
+                    return i > 0 ? this.correrias[i - 1] : null;
+                },
+
+                // Comparación de totales: correría idx vs la anterior
+                _comparar(cur, prev) {
+                    const diff = cur - prev;
+                    const pct = prev > 0 ? Math.round(diff / prev * 100) : (cur > 0 ? 100 : 0);
+                    const flecha = diff > 0 ? '▲' : (diff < 0 ? '▼' : '■');
+                    return {
+                        diff, pct, flecha,
+                        clase: diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat'),
+                        claseTxt: diff > 0 ? 'up-txt' : (diff < 0 ? 'down-txt' : 'flat-txt'),
+                        texto: `${flecha} ${this.formatearMoneda(Math.abs(diff))} (${pct > 0 ? '+' : ''}${pct}%)`
+                    };
+                },
+
+                deltaTexto(idx) {
+                    if (idx < 1 || !this.correrias[idx - 1]) return '';
+                    return this._comparar(this.correrias[idx].total, this.correrias[idx - 1].total).texto;
+                },
+                deltaClase(idx) {
+                    if (idx < 1 || !this.correrias[idx - 1]) return 'flat';
+                    return this._comparar(this.correrias[idx].total, this.correrias[idx - 1].total).clase;
+                },
+
+                comparacionSel() {
+                    const prev = this.correriaAnterior();
+                    if (!prev) return null;
+                    const info = this._comparar(this.correriaSeleccionada.total, prev.total);
+                    return { texto: info.texto, clase: info.claseTxt };
+                },
+
+                // Comparación por categoría entre la correría seleccionada y la anterior
+                categoriasComparacion() {
+                    const sel = this.correriaSeleccionada;
+                    const prev = this.correriaAnterior();
+                    if (!sel) return [];
+                    const catsSel = sel.categorias || {};
+                    const catsPrev = (prev && prev.categorias) || {};
+                    const nombres = [...new Set([...Object.keys(catsSel), ...Object.keys(catsPrev)])].sort();
+                    return nombres.map(n => {
+                        const actual = catsSel[n] || 0;
+                        const anterior = catsPrev[n] || 0;
+                        const diff = actual - anterior;
+                        return {
+                            nombre: n, actual, anterior,
+                            flecha: diff > 0 ? '▲' : (diff < 0 ? '▼' : '■'),
+                            clase: diff > 0 ? 'up-txt' : (diff < 0 ? 'down-txt' : 'flat-txt')
+                        };
+                    });
+                },
+
+                rangoFechas(c) {
+                    if (!c.start_date && !c.end_date) return 'Sin fechas';
+                    return `${this.formatearFecha(c.start_date)} — ${this.formatearFecha(c.end_date)}`;
                 },
 
                 toggleForm() {
